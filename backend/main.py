@@ -17,7 +17,6 @@ def get_db_connection():
     return conn
 
 def init_db():
-    # Create the database and table if they don't exist
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -75,10 +74,8 @@ def get_data():
 def insert_data():
     data = request.get_json()
     
-    # Extract the mac_address
     mac_address = data.get('mac_address', '')
     
-    # Convert the entire data object to JSON string for storage
     data_json = json.dumps(data)
     
     conn = get_db_connection()
