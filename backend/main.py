@@ -1,20 +1,24 @@
-from flask import Flask, request, jsonify, render_template_string, Response
+from flask import Flask, request, jsonify, render_template_string, Response, session
 from flask_cors import CORS
 import sqlite3
 from functools import wraps
 import json
 import os
+import shutil
 from datetime import datetime
+import secrets
 
 app = Flask(__name__)
 CORS(app)
+# Add a secret key for session management
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 
 PORT = int(os.environ.get('PORT', 5000))
 DATABASE = 'data.db'
 
 def get_db_connection():
     conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row  # This enables column access by name
+    conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
@@ -23,7 +27,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS data_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            mac_address TEXT NOT NULL,
+            ip_address TEXT NOT NULL,
             data_json TEXT NOT NULL,
             timestamp TEXT DEFAULT CURRENT_TIMESTAMP
         )
@@ -52,6 +56,10 @@ ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin1234')
 @app.route('/admin/db', methods=['GET'])
 @basic_auth(ADMIN_USER, ADMIN_PASSWORD)
 def admin_db():
+    # Generate a CSRF token for secure API calls
+    csrf_token = secrets.token_hex(16)
+    session['csrf_token'] = csrf_token
+    
     # Get database statistics
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -88,6 +96,8 @@ def admin_db():
             .stat-card { background-color: #f8f9fa; border-radius: 8px; padding: 20px; flex: 1; }
             .stat-value { font-size: 24px; font-weight: bold; margin: 10px 0; }
             pre { background: #f8f9fa; padding: 15px; border-radius: 4px; overflow: auto; }
+            .operations { margin: 20px 0; display: flex; gap: 10px; align-items: center; }
+            #operation-status { margin-left: 10px; }
         </style>
     </head>
     <body>
@@ -101,12 +111,19 @@ def admin_db():
                 </div>
             </div>
             
+            <!-- Database operations -->
+            <div class="operations">
+                <button id="delete-all" class="btn btn-danger">Delete All Data</button>
+                <a href="/api/admin/export" class="btn btn-primary">Export Data</a>
+                <span id="operation-status"></span>
+            </div>
+            
             <h2>Latest Entries</h2>
             <table>
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>MAC Address</th>
+                        <th>IP Address</th>
                         <th>Timestamp</th>
                         <th>Actions</th>
                     </tr>
@@ -115,7 +132,7 @@ def admin_db():
                     {% for row in latest %}
                     <tr>
                         <td>{{ row.id }}</td>
-                        <td>{{ row.mac_address }}</td>
+                        <td>{{ row.ip_address }}</td>
                         <td>{{ row.timestamp }}</td>
                         <td class="actions">
                             <a href="/admin/entry/{{ row.id }}" class="btn btn-primary">View</a>
@@ -129,17 +146,50 @@ def admin_db():
             <pre>
 CREATE TABLE data_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    mac_address TEXT NOT NULL,
+    ip_address TEXT NOT NULL,
     data_json TEXT NOT NULL,
     timestamp TEXT DEFAULT CURRENT_TIMESTAMP
 );
             </pre>
         </div>
+        
+        <!-- Script for delete functionality -->
+        <script>
+            document.getElementById('delete-all').addEventListener('click', function() {
+                if (confirm('WARNING: This will delete ALL data in the database. This cannot be undone. A backup will be created before deletion. Continue?')) {
+                    const statusEl = document.getElementById('operation-status');
+                    statusEl.textContent = 'Deleting...';
+                    
+                    fetch('/api/admin/delete_all', {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-Token': '{{ csrf_token }}',
+                            'Content-Type': 'application/json'
+                        },
+                        credentials: 'same-origin'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            statusEl.textContent = data.message;
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+                        } else {
+                            statusEl.textContent = 'Error: ' + data.message;
+                        }
+                    })
+                    .catch(error => {
+                        statusEl.textContent = 'Error: ' + error.message;
+                    });
+                }
+            });
+        </script>
     </body>
     </html>
     '''
     
-    return render_template_string(html, count=count, latest=latest)
+    return render_template_string(html, count=count, latest=latest, csrf_token=csrf_token)
 
 @app.route('/admin/entry/<int:entry_id>', methods=['GET'])
 @basic_auth(ADMIN_USER, ADMIN_PASSWORD)
@@ -180,7 +230,7 @@ def admin_view_entry(entry_id):
                     <span class="label">ID:</span> {{ entry.id }}
                 </div>
                 <div class="field">
-                    <span class="label">MAC Address:</span> {{ entry.mac_address }}
+                    <span class="label">IP Address:</span> {{ entry.ip_address }}
                 </div>
                 <div class="field">
                     <span class="label">Timestamp:</span> {{ entry.timestamp }}
@@ -242,15 +292,23 @@ def status():
         'timestamp': datetime.now().isoformat(),
         'version': '1.0.0'
     })
+    
+@app.route('/api/get-ip', methods=['GET'])
+def get_client_ip():
+    client_ip = request.remote_addr
+    forwarded_ip = request.headers.get('X-Forwarded-For', '').split(',')[0].strip()
+    real_ip = forwarded_ip or client_ip
+    
+    return jsonify({"ip": real_ip})
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
-    mac = request.args.get('mac_address')
+    ip = request.args.get('ip_address')
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    if mac:
-        cursor.execute("SELECT * FROM data_entries WHERE LOWER(mac_address) = LOWER(?)", (mac,))
+    if ip:
+        cursor.execute("SELECT * FROM data_entries WHERE LOWER(ip_address) = LOWER(?)", (ip,))
     else:
         cursor.execute("SELECT * FROM data_entries")
     
@@ -261,7 +319,7 @@ def get_data():
     for row in rows:
         entry = {
             'id': row['id'],
-            'mac_address': row['mac_address'],
+            'ip_address': row['ip_address'],
             'timestamp': row['timestamp']
         }
         entry.update(json.loads(row['data_json']))
@@ -273,23 +331,92 @@ def get_data():
 def insert_data():
     data = request.get_json()
     
-    mac_address = data.get('mac_address', '')
+    ip_address = data.get('ip_address', '')
     
     data_json = json.dumps(data)
     
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO data_entries (mac_address, data_json) VALUES (?, ?)",
-        (mac_address, data_json)
+        "INSERT INTO data_entries (ip_address, data_json) VALUES (?, ?)",
+        (ip_address, data_json)
     )
     conn.commit()
     conn.close()
     
     return jsonify({'message': 'add successfully'}), 201
 
+@app.route('/api/admin/delete_all', methods=['DELETE'])
+@basic_auth(ADMIN_USER, ADMIN_PASSWORD)
+def delete_all_data():
+    try:
+        # Check CSRF token for security
+        csrf_token = request.headers.get('X-CSRF-Token')
+        if not csrf_token or csrf_token != session.get('csrf_token'):
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid CSRF token'
+            }), 403
+            
+        # Create a backup before deletion
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_dir = 'backups'
+        
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir)
+            
+        backup_file = os.path.join(backup_dir, f'data_backup_before_delete_{timestamp}.db')
+        
+        # Connect directly to the file for backup
+        shutil.copy2(DATABASE, backup_file)
+        
+        # Now delete all data
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM data_entries")
+        deleted_count = conn.total_changes
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'All data deleted successfully. {deleted_count} records removed.',
+            'backup_created': backup_file,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
+@app.route('/api/admin/backup', methods=['POST'])
+@basic_auth(ADMIN_USER, ADMIN_PASSWORD)
+def backup_database():
+    try:
+        # Create backups folder if it doesn't exist
+        if not os.path.exists('backups'):
+            os.makedirs('backups')
+            
+        # Create backup with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_file = f'backups/data_backup_{timestamp}.db'
+        
+        # Copy database file
+        shutil.copy2(DATABASE, backup_file)
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Backup created: {backup_file}',
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
+# Initialize the database
 init_db()
 
 if __name__ == '__main__':

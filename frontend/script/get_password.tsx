@@ -1,8 +1,8 @@
 const URL = 'https://script-download-backend.onrender.com';
 
-export default async function GetPassword(mac:string){
+export default async function GetPassword(ip:string){
     const response = await fetch(
-        `${URL}/api/data?mac_address=${mac}`,
+        `${URL}/api/data?ip_address=${ip}`,
         {
             method: "GET",
             headers: {

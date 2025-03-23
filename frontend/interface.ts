@@ -1,5 +1,5 @@
 export interface Password{
-    mac_address: string;
+    ip_address: string;
     password: string;
     sequence: string;
     url: string;

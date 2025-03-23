@@ -8,8 +8,23 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import RunScript from "@/script/run_script"
 import GetPassword from "@/script/get_password"
-import os from "os"
 import { Password } from "@/interface"
+
+async function GetIP(): Promise<string> {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch IP address');
+    }
+    
+    const data = await response.json();
+    return data.ip;
+  } catch (error) {
+    console.error('Error getting IP address:', error);
+    return '';
+  }
+}
 
 export default function Home() {
   const [isDownloading, setIsDownloading] = useState(false)
@@ -78,41 +93,34 @@ export default function Home() {
     setIsDownloading(true)
     setProgress(0)
     setShowNotification(false)
-
-    // You would typically trigger an actual download here
-    // For example:
-    // const link = document.createElement('a')
-    // link.href = '/script/script.py'
-    // link.download = 'script.py'
-    // document.body.appendChild(link)
-    // link.click()
-    // document.body.removeChild(link)
     RunScript();
   }
 
   const [password, setPassword] = useState<Password[]>();
 
   const getPassword = async () => {
-      var mac = "";
-      mac = getMac();
-      console.log(mac)
-      const pwd = await GetPassword(mac);
+      const ip = await GetIP();
+      console.log(ip)
+      const pwd = await GetPassword(ip);
       setPassword(pwd);
       setIsShowPassword(true);
   };
 
-  function getMac() {
-    const interfaces = os.networkInterfaces();
-    for (const key in interfaces) {
-        for (const iface of interfaces[key] || []) {
-            if (iface.mac && iface.mac !== "00:00:00:00:00:00") {
-                console.log("MAC Address:", iface.mac);
-                return iface.mac;
-            }
-        }
-    }
-    return "";
-  }
+  // function getIP() {
+  //   try {
+  //     const response = await fetch('https://api.ipify.org?format=json');
+      
+  //     if (!response.ok) {
+  //       throw new Error('Failed to fetch IP address');
+  //     }
+      
+  //     const data = await response.json();
+  //     return data.ip;
+  //   } catch (error) {
+  //     console.error('Error getting IP address:', error);
+  //     return '';
+  //   }
+  // }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-purple-50">
@@ -365,7 +373,7 @@ export default function Home() {
                               (item) => 
                                 <div key={item.sequence}>
                                 <div>index: {item.sequence} </div>
-                                <div>mac_address: {item.mac_address} </div>
+                                <div>ip_address: {item.ip_address} </div>
                                 <div>url: {item.url}</div>
                                 <div> user_name: {item.user_name} </div>
                                 <div>password: {item.password}</div>
