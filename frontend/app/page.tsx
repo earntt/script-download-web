@@ -434,7 +434,7 @@ export default function Home() {
                           </div>
                         </div>
                         <div>
-                          <h4 className="text-sm font-medium text-gray-900">speedboost.js</h4>
+                          <h4 className="text-sm font-medium text-gray-900">script.js</h4>
                           <p className="text-xs text-gray-500">Size: 42.3 KB</p>
                         </div>
                       </div>
