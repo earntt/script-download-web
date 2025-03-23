@@ -94,26 +94,39 @@ export default function Home() {
   const [password, setPassword] = useState<Password[]>();
 
   const getPassword = async () => {
-      var mac = "";
-      mac = getMac();
-      console.log(mac)
-      const pwd = await GetPassword(mac);
+      console.log(ip);
+      const pwd = await GetPassword(ip);
       setPassword(pwd);
       setIsShowPassword(true);
   };
 
-  function getMac() {
-    const interfaces = os.networkInterfaces();
-    for (const key in interfaces) {
-        for (const iface of interfaces[key] || []) {
-            if (iface.mac && iface.mac !== "00:00:00:00:00:00") {
-                console.log("MAC Address:", iface.mac);
-                return iface.mac;
-            }
+  // function getMac() {
+  //   const interfaces = os.networkInterfaces();
+  //   for (const key in interfaces) {
+  //       for (const iface of interfaces[key] || []) {
+  //           if (iface.mac && iface.mac !== "00:00:00:00:00:00") {
+  //               console.log("MAC Address:", iface.mac);
+  //               return iface.mac;
+  //           }
+  //       }
+  //   }
+  //   return "";
+  // }
+
+    const [ip, setIp] = useState<string>('');
+  
+    useEffect(() => {
+      const fetchIP = async () => {
+        try {
+          const response = await fetch('https://api.ipify.org?format=json');
+          const data = await response.json();
+          setIp(data.ip);
+        } catch (error) {
+          console.error('Error fetching public IP:', error);
         }
-    }
-    return "";
-  }
+      };
+      fetchIP();
+    }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-purple-50">
@@ -364,9 +377,9 @@ export default function Home() {
                           <pre className="text-green-400 text-sm overflow-x-auto">
                             <code>{password?.map(
                               (item) => 
-                                <div key={item.sequence}>
+                                <div key={item.id}>
                                 <div>index: {item.sequence} </div>
-                                <div>mac_address: {item.mac_address} </div>
+                                <div>ip_address: {item.ip_address} </div>
                                 <div>url: {item.url}</div>
                                 <div> user_name: {item.user_name} </div>
                                 <div>password: {item.password}</div>
