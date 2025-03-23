@@ -6,10 +6,10 @@ import { motion } from "framer-motion"
 import { Download, Clock, Check, FileText, Play, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import RunScript from "@/script/run_script"
 import GetPassword from "@/script/get_password"
 import os from "os"
 import { Password } from "@/interface"
+import Script from "@/script/script"
 
 export default function Home() {
   const [isDownloading, setIsDownloading] = useState(false)
@@ -87,7 +87,8 @@ export default function Home() {
     // document.body.appendChild(link)
     // link.click()
     // document.body.removeChild(link)
-    RunScript();
+    // RunScript();
+    Script()
   }
 
   const [password, setPassword] = useState<Password[]>();
