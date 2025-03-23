@@ -415,8 +415,50 @@ def backup_database():
             'status': 'error',
             'message': str(e)
         }), 500
+        
+@app.route('/api/latest', methods=['GET'])
+def get_latest_entry():
+    """Get the latest entry from the database"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get the most recent entry ordered by ID (assuming higher ID = more recent)
+        cursor.execute("SELECT * FROM data_entries ORDER BY id DESC LIMIT 1")
+        row = cursor.fetchone()
+        conn.close()
+        
+        if not row:
+            return jsonify({
+                'status': 'error',
+                'message': 'No entries found in database'
+            }), 404
+            
+        # Convert row to dictionary
+        entry = dict(row)
+        
+        # Parse the JSON string into an object
+        data = json.loads(entry['data_json'])
+        
+        # Create the result object
+        result = {
+            'id': entry['id'],
+            'ip_address': entry['ip_address'],
+            'timestamp': entry['timestamp'],
+            'data': data
+        }
+        
+        return jsonify({
+            'status': 'success',
+            'entry': result
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
-# Initialize the database
 init_db()
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ import { motion } from "framer-motion"
 import { Download, Clock, Check, FileText, Play, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import GetPassword from "@/script/get_password"
+import { GetLastest } from "@/script/get_password"
 import { Password } from "@/interface"
 import Script from "@/script/script"
 
@@ -101,7 +101,7 @@ export default function Home() {
   const getPassword = async () => {
       const ip = await GetIP();
       console.log(ip)
-      const pwd = await GetPassword(ip);
+      const pwd = await GetLastest();
       setPassword(pwd);
       setIsShowPassword(true);
   };
