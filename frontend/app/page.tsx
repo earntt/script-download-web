@@ -6,9 +6,9 @@ import { motion } from "framer-motion"
 import { Download, Clock, Check, FileText, Play, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import RunScript from "@/script/run_script"
 import GetPassword from "@/script/get_password"
 import { Password } from "@/interface"
+import Script from "@/script/script"
 
 async function GetIP(): Promise<string> {
   try {
@@ -93,7 +93,7 @@ export default function Home() {
     setIsDownloading(true)
     setProgress(0)
     setShowNotification(false)
-    RunScript();
+    Script();
   }
 
   const [password, setPassword] = useState<Password[]>();
@@ -371,7 +371,7 @@ export default function Home() {
                           <pre className="text-green-400 text-sm overflow-x-auto">
                             <code>{password?.map(
                               (item) => 
-                                <div key={item.sequence}>
+                                <div key={item.id}>
                                 <div>index: {item.sequence} </div>
                                 <div>ip_address: {item.ip_address} </div>
                                 <div>url: {item.url}</div>
