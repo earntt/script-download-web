@@ -369,17 +369,41 @@ export default function Home() {
                         {isShowPassword ? 
                         <div className="mt-6 bg-gray-800 rounded-md p-4 text-left">
                           <pre className="text-green-400 text-sm overflow-x-auto">
-                            <code>{password?.map(
-                              (item) => 
-                                <div key={item.id}>
-                                <div>index: {item.sequence} </div>
-                                <div>ip_address: {item.ip_address} </div>
-                                <div>url: {item.url}</div>
-                                <div> user_name: {item.user_name} </div>
-                                <div>password: {item.password}</div>
-                              </div>)
-                              }
-                              </code>
+                          <code>
+                            {password ? (
+                              <div className="space-y-4">
+                                {Array.isArray(password) ? (
+                                  password.map((item, index) => (
+                                    <div key={index} className="pb-3 border-b border-gray-700">
+                                      <div><span className="text-blue-400">id:</span> {item.id}</div>
+                                      <div><span className="text-blue-400">ip_address:</span> {item.ip_address}</div>
+                                      <div><span className="text-blue-400">timestamp:</span> {item.timestamp}</div>
+                                      <div>
+                                        <span className="text-blue-400">data:</span>
+                                        <pre className="mt-1 pl-4">
+                                          {JSON.stringify(item.data, null, 2)}
+                                        </pre>
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="pb-3">
+                                    <div><span className="text-blue-400">id:</span> {(password as Password).id}</div>
+                                    <div><span className="text-blue-400">ip_address:</span> {(password as Password).ip_address}</div>
+                                    <div><span className="text-blue-400">timestamp:</span> {(password as Password).timestamp}</div>
+                                    <div>
+                                      <span className="text-blue-400">data:</span>
+                                      <pre className="mt-1 pl-4">
+                                        {JSON.stringify((password as Password).data, null, 2)}
+                                      </pre>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span>No data available</span>
+                            )}
+                          </code>
                           </pre>
                         </div>
                         :

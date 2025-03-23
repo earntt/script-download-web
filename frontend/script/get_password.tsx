@@ -27,7 +27,16 @@ export async function GetLastest(){
         }
     );
     if(!response.ok){
-        throw new Error("Failed to add data");
+        throw new Error("Failed to fetch latest data");
     }
-    return await response.json();
+    return await response.json().then((responseData) => {
+        // The API returns { status: "success", entry: { ... data object ... } }
+        // The entry object contains id, ip_address, timestamp, and data fields
+        // The data field contains the parsed JSON from data_json
+        if (responseData.status === "success" && responseData.entry) {
+            return responseData.entry;
+        } else {
+            throw new Error("Invalid data format received");
+        }
+    });
 }
